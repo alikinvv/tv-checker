@@ -1,0 +1,44 @@
+{
+  "name": "tv-checker",
+  "displayName": "TVChecker",
+  "version": "1.0.0",
+  "publisher": "ValeriyAlikin",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "license": "MIT",
+  "description": "Tools",
+  "categories": [
+    "Other"
+  ],
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "activationEvents": [
+    "*"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "tvChecker.check",
+        "title": "Check code"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "typescript": "^4.9.5"
+  },
+  "devDependencies": {
+    "@types/node": "14.x",
+    "@types/vscode": "^1.60.0",
+    "eslint": "^7.32.0"
+  }
+}

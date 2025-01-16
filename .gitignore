@@ -1,0 +1,19 @@
+# Dependency directories
+node_modules/
+
+# local env
+.env
+
+# Compiled files
+*.js
+*.map
+/dist
+
+!newrelic.js
+!vendor.webpack.config.js
+!vendors.js
+!webpack.config*js
+!config.js
+!fix-tv-database-models.js
+!/scripts/postinstall.js
+!/scripts/remove-unused-files.js
