@@ -14,10 +14,12 @@ export class Imports {
     ): {
         diagnostics: vscode.Diagnostic[];
         decorationRanges: vscode.Range[];
+        changes: { start: number; end: number; newText: string }[]; // Добавляем массив изменений
     } {
         const sourceFile = this.createSourceFile(code);
         const diagnostics: vscode.Diagnostic[] = [];
         const decorationRanges: vscode.Range[] = [];
+        const changes: { start: number; end: number; newText: string }[] = []; // Инициализируем массив изменений
 
         // Рекурсивно обходим AST
         const visit = (node: ts.Node) => {
@@ -58,6 +60,16 @@ export class Imports {
                         // Добавляем диапазон для декорации
                         decorationRanges.push(range);
                     }
+
+                    // Проверяем, начинается ли путь с "../" и заменяем его на "./"
+                    if (importPath.startsWith("../")) {
+                        const newPath = `./${importPath}`;
+                        changes.push({
+                            start: moduleSpecifier.getStart(sourceFile) + 1, // +1 чтобы пропустить кавычку
+                            end: moduleSpecifier.getEnd() - 1, // -1 чтобы пропустить кавычку
+                            newText: newPath,
+                        });
+                    }
                 }
             }
 
@@ -65,7 +77,7 @@ export class Imports {
         };
 
         visit(sourceFile);
-        return { diagnostics, decorationRanges };
+        return { diagnostics, decorationRanges, changes }; // Возвращаем изменения
     }
 
     /**

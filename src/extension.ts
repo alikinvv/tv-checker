@@ -15,7 +15,8 @@ export function activate(context: vscode.ExtensionContext) {
         borderRadius: "2px",
     });
 
-    const runChecks = (document: vscode.TextDocument) => {
+    const runChecks = async (document: vscode.TextDocument) => {
+        // Добавляем async
         const editor = vscode.window.activeTextEditor;
 
         diagnosticCollection.clear();
@@ -52,8 +53,11 @@ export function activate(context: vscode.ExtensionContext) {
 
         // Проверка путей импортов
         const code = document.getText();
-        const { diagnostics: importDiagnostics, decorationRanges } =
-            imports.checkImportPaths(code, document);
+        const {
+            diagnostics: importDiagnostics,
+            decorationRanges,
+            changes, // Получаем изменения из checkImportPaths
+        } = imports.checkImportPaths(code, document);
 
         allDiagnostics = [...allDiagnostics, ...importDiagnostics];
         allDecorationRanges = [...allDecorationRanges, ...decorationRanges];
@@ -62,6 +66,25 @@ export function activate(context: vscode.ExtensionContext) {
 
         if (editor && editor.document === document) {
             editor.setDecorations(methodDecorationType, allDecorationRanges);
+        }
+
+        // Применяем изменения к документу, если они есть
+        if (changes.length > 0 && editor) {
+            const success = await editor.edit((editBuilder) => {
+                // Используем await
+                changes.forEach((change) => {
+                    const startPos = document.positionAt(change.start);
+                    const endPos = document.positionAt(change.end);
+                    const range = new vscode.Range(startPos, endPos);
+                    editBuilder.replace(range, change.newText);
+                });
+            });
+
+            // Если изменения успешно применены, сохраняем файл
+            if (success) {
+                await document.save(); // Сохраняем файл
+                console.log("Файл сохранен после применения изменений.");
+            }
         }
     };
 
