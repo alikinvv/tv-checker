@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { errorUtils } from "./libs";
-import { imports } from "./modules";
+import { checkHandlerNaming, imports } from "./modules";
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Extension "TVChecker" is now active!');
@@ -16,7 +16,6 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     const runChecks = async (document: vscode.TextDocument) => {
-        // Добавляем async
         const editor = vscode.window.activeTextEditor;
 
         diagnosticCollection.clear();
@@ -56,11 +55,20 @@ export function activate(context: vscode.ExtensionContext) {
         const {
             diagnostics: importDiagnostics,
             decorationRanges,
-            changes, // Получаем изменения из checkImportPaths
+            changes,
         } = imports.checkImportPaths(code, document);
 
         allDiagnostics = [...allDiagnostics, ...importDiagnostics];
         allDecorationRanges = [...allDecorationRanges, ...decorationRanges];
+
+        // Проверка наименования функций-обработчиков
+        const {
+            diagnostics: handlerNamingDiagnostics,
+            decorationRanges: handlerRanges,
+        } = checkHandlerNaming(code, document);
+
+        allDiagnostics = [...allDiagnostics, ...handlerNamingDiagnostics];
+        allDecorationRanges = [...allDecorationRanges, ...handlerRanges];
 
         diagnosticCollection.set(document.uri, allDiagnostics);
 
@@ -71,7 +79,6 @@ export function activate(context: vscode.ExtensionContext) {
         // Применяем изменения к документу, если они есть
         if (changes.length > 0 && editor) {
             const success = await editor.edit((editBuilder) => {
-                // Используем await
                 changes.forEach((change) => {
                     const startPos = document.positionAt(change.start);
                     const endPos = document.positionAt(change.end);
@@ -82,7 +89,7 @@ export function activate(context: vscode.ExtensionContext) {
 
             // Если изменения успешно применены, сохраняем файл
             if (success) {
-                await document.save(); // Сохраняем файл
+                await document.save();
                 console.log("Файл сохранен после применения изменений.");
             }
         }
