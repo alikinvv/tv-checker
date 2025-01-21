@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { errorUtils } from "./libs";
-import { checkHandlerNaming, imports } from "./modules";
+import { checkHandlerNaming, imports, ReactMapKeyChecker } from "./modules";
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Extension "TVChecker" is now active!');
@@ -14,6 +14,8 @@ export function activate(context: vscode.ExtensionContext) {
         border: "1px solid red",
         borderRadius: "2px",
     });
+
+    const reactMapKeyChecker = new ReactMapKeyChecker();
 
     const runChecks = async (document: vscode.TextDocument) => {
         const editor = vscode.window.activeTextEditor;
@@ -54,25 +56,38 @@ export function activate(context: vscode.ExtensionContext) {
         const code = document.getText();
         const {
             diagnostics: importDiagnostics,
-            decorationRanges,
+            decorationRanges: importDecorationRanges,
             changes,
         } = imports.checkImportPaths(code, document);
 
         allDiagnostics = [...allDiagnostics, ...importDiagnostics];
-        allDecorationRanges = [...allDecorationRanges, ...decorationRanges];
+        allDecorationRanges = [
+            ...allDecorationRanges,
+            ...importDecorationRanges,
+        ];
 
         // Проверка наименования функций-обработчиков
         const {
             diagnostics: handlerNamingDiagnostics,
-            decorationRanges: handlerRanges,
+            decorationRanges: handlerDecorationRanges,
         } = checkHandlerNaming(code, document);
 
         allDiagnostics = [...allDiagnostics, ...handlerNamingDiagnostics];
-        allDecorationRanges = [...allDecorationRanges, ...handlerRanges];
+        allDecorationRanges = [
+            ...allDecorationRanges,
+            ...handlerDecorationRanges,
+        ];
+
+        // Проверка ключей в map для React-компонентов (только для .tsx файлов)
+        if (document.fileName.endsWith(".tsx")) {
+            const mapKeyRanges = reactMapKeyChecker.checkDocument(document);
+            allDecorationRanges = [...allDecorationRanges, ...mapKeyRanges];
+        }
 
         diagnosticCollection.set(document.uri, allDiagnostics);
 
         if (editor && editor.document === document) {
+            // Применяем все декорации (импорты, обработчики, .map)
             editor.setDecorations(methodDecorationType, allDecorationRanges);
         }
 
