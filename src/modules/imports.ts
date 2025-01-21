@@ -38,27 +38,35 @@ export class Imports {
                         const start = moduleSpecifier.getStart(sourceFile);
                         const end = moduleSpecifier.getEnd();
 
-                        // Находим позицию названия файла в строке импорта
-                        const fileName = importPath.split("/").pop() || ""; // Получаем название файла
-                        const fileNameStart = importPath.lastIndexOf("/") + 1; // Позиция начала названия файла
-                        const fileNameEnd = fileNameStart + fileName.length; // Позиция конца названия файла
+                        if (
+                            (importPath.startsWith("./") ||
+                                importPath.startsWith("../")) &&
+                            !importPath.includes("/components/") &&
+                            importPath.split("/").length > 2
+                        ) {
+                            // Находим позицию названия файла в строке импорта
+                            const fileName = importPath.split("/").pop() || ""; // Получаем название файла
+                            const fileNameStart =
+                                importPath.lastIndexOf("/") + 1; // Позиция начала названия файла
+                            const fileNameEnd = fileNameStart + fileName.length; // Позиция конца названия файла
 
-                        // Получаем диапазон для ошибки (увеличиваем конечную позицию на 1)
-                        const range = new vscode.Range(
-                            document.positionAt(start + fileNameStart),
-                            document.positionAt(start + fileNameEnd + 1) // +1 для включения последнего символа
-                        );
+                            // Получаем диапазон для ошибки (увеличиваем конечную позицию на 1)
+                            const range = new vscode.Range(
+                                document.positionAt(start + fileNameStart),
+                                document.positionAt(start + fileNameEnd + 1) // +1 для включения последнего символа
+                            );
 
-                        // Добавляем диагностику
-                        const diagnostic = new vscode.Diagnostic(
-                            range,
-                            `Импорт должен указывать на папку, а не на файл: ${importPath}`,
-                            vscode.DiagnosticSeverity.Error
-                        );
-                        diagnostics.push(diagnostic);
+                            // Добавляем диагностику
+                            const diagnostic = new vscode.Diagnostic(
+                                range,
+                                `Импорт должен указывать на папку, а не на файл: ${importPath}`,
+                                vscode.DiagnosticSeverity.Error
+                            );
+                            diagnostics.push(diagnostic);
 
-                        // Добавляем диапазон для декорации
-                        decorationRanges.push(range);
+                            // Добавляем диапазон для декорации
+                            decorationRanges.push(range);
+                        }
                     }
 
                     // Проверяем, начинается ли путь с "../" и заменяем его на "./"
