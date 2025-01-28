@@ -5,6 +5,7 @@ import {
     imports,
     ReactMapKeyChecker,
     SwitchDefaultChecker,
+    SwitchDuplicateCaseChecker, // 1. Добавляем новый импорт
 } from "./modules";
 
 export function activate(context: vscode.ExtensionContext) {
@@ -20,8 +21,10 @@ export function activate(context: vscode.ExtensionContext) {
         borderRadius: "2px",
     });
 
+    // 2. Инициализируем новые проверки
     const reactMapKeyChecker = new ReactMapKeyChecker();
     const switchDefaultChecker = new SwitchDefaultChecker();
+    const switchDuplicateCaseChecker = new SwitchDuplicateCaseChecker();
 
     const runChecks = async (document: vscode.TextDocument) => {
         const editor = vscode.window.activeTextEditor;
@@ -34,9 +37,8 @@ export function activate(context: vscode.ExtensionContext) {
         let allDiagnostics: vscode.Diagnostic[] = [];
         let allDecorationRanges: vscode.Range[] = [];
 
-        // Проверка типов для всех .ts файлов
+        // Проверка типов для .ts файлов
         if (document.fileName.endsWith(".ts")) {
-            console.log("Running type checker...");
             const typeErrors = errorUtils.runTypeChecker(
                 diagnosticCollection,
                 methodDecorationType,
@@ -47,7 +49,7 @@ export function activate(context: vscode.ExtensionContext) {
                 return new vscode.Diagnostic(
                     error.range,
                     error.message,
-                    vscode.DiagnosticSeverity.Warning
+                    vscode.DiagnosticSeverity.Warning // Все проверки как Warning
                 );
             });
 
@@ -58,7 +60,7 @@ export function activate(context: vscode.ExtensionContext) {
             ];
         }
 
-        // Проверка путей импортов
+        // Проверка импортов
         const code = document.getText();
         const {
             diagnostics: importDiagnostics,
@@ -72,7 +74,7 @@ export function activate(context: vscode.ExtensionContext) {
             ...importDecorationRanges,
         ];
 
-        // Проверка наименования функций-обработчиков
+        // Проверка именования обработчиков
         const {
             diagnostics: handlerNamingDiagnostics,
             decorationRanges: handlerDecorationRanges,
@@ -84,17 +86,30 @@ export function activate(context: vscode.ExtensionContext) {
             ...handlerDecorationRanges,
         ];
 
-        // Проверка ключей в map для React-компонентов (только для .tsx)
+        // Проверка ключей React-компонентов (.tsx)
         if (document.fileName.endsWith(".tsx")) {
             const mapKeyRanges = reactMapKeyChecker.checkDocument(document);
             allDecorationRanges = [...allDecorationRanges, ...mapKeyRanges];
         }
 
-        // Проверка default в switch (для всех .ts и .tsx)
+        // Общие проверки для .ts и .tsx
         if (
             document.fileName.endsWith(".ts") ||
             document.fileName.endsWith(".tsx")
         ) {
+            // 3. Проверка дублирующихся case
+            const {
+                diagnostics: duplicateCaseDiagnostics,
+                decorationRanges: duplicateCaseRanges,
+            } = switchDuplicateCaseChecker.checkDocument(document);
+
+            allDiagnostics = [...allDiagnostics, ...duplicateCaseDiagnostics];
+            allDecorationRanges = [
+                ...allDecorationRanges,
+                ...duplicateCaseRanges,
+            ];
+
+            // Проверка default в switch
             const {
                 diagnostics: switchDiagnostics,
                 decorationRanges: switchRanges,
@@ -110,7 +125,7 @@ export function activate(context: vscode.ExtensionContext) {
             editor.setDecorations(methodDecorationType, allDecorationRanges);
         }
 
-        // Применение изменений к документу
+        // Применение автоматических исправлений
         if (changes.length > 0 && editor) {
             const success = await editor.edit((editBuilder) => {
                 changes.forEach((change) => {
@@ -128,9 +143,9 @@ export function activate(context: vscode.ExtensionContext) {
         }
     };
 
+    // Обработчики событий
     const saveDisposable = vscode.workspace.onDidSaveTextDocument(
         (document) => {
-            console.log(`File saved: ${document.fileName}`);
             if (
                 document.languageId === "typescript" ||
                 document.languageId === "typescriptreact"
@@ -144,7 +159,6 @@ export function activate(context: vscode.ExtensionContext) {
     const changeDisposable = vscode.workspace.onDidChangeTextDocument(
         (event) => {
             const document = event.document;
-            console.log(`File changed: ${document.fileName}`);
             if (
                 document.languageId === "typescript" ||
                 document.languageId === "typescriptreact"
