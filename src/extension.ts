@@ -1,6 +1,11 @@
 import * as vscode from "vscode";
 import { errorUtils } from "./libs";
-import { checkHandlerNaming, imports, ReactMapKeyChecker } from "./modules";
+import {
+    checkNaming,
+    imports,
+    ReactMapKeyChecker,
+    SwitchDefaultChecker,
+} from "./modules";
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Extension "TVChecker" is now active!');
@@ -16,6 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     const reactMapKeyChecker = new ReactMapKeyChecker();
+    const switchDefaultChecker = new SwitchDefaultChecker();
 
     const runChecks = async (document: vscode.TextDocument) => {
         const editor = vscode.window.activeTextEditor;
@@ -41,7 +47,7 @@ export function activate(context: vscode.ExtensionContext) {
                 return new vscode.Diagnostic(
                     error.range,
                     error.message,
-                    vscode.DiagnosticSeverity.Error
+                    vscode.DiagnosticSeverity.Warning
                 );
             });
 
@@ -70,7 +76,7 @@ export function activate(context: vscode.ExtensionContext) {
         const {
             diagnostics: handlerNamingDiagnostics,
             decorationRanges: handlerDecorationRanges,
-        } = checkHandlerNaming(code, document);
+        } = checkNaming(code, document);
 
         allDiagnostics = [...allDiagnostics, ...handlerNamingDiagnostics];
         allDecorationRanges = [
@@ -78,20 +84,33 @@ export function activate(context: vscode.ExtensionContext) {
             ...handlerDecorationRanges,
         ];
 
-        // Проверка ключей в map для React-компонентов (только для .tsx файлов)
+        // Проверка ключей в map для React-компонентов (только для .tsx)
         if (document.fileName.endsWith(".tsx")) {
             const mapKeyRanges = reactMapKeyChecker.checkDocument(document);
             allDecorationRanges = [...allDecorationRanges, ...mapKeyRanges];
         }
 
+        // Проверка default в switch (для всех .ts и .tsx)
+        if (
+            document.fileName.endsWith(".ts") ||
+            document.fileName.endsWith(".tsx")
+        ) {
+            const {
+                diagnostics: switchDiagnostics,
+                decorationRanges: switchRanges,
+            } = switchDefaultChecker.checkDocument(document);
+
+            allDiagnostics = [...allDiagnostics, ...switchDiagnostics];
+            allDecorationRanges = [...allDecorationRanges, ...switchRanges];
+        }
+
         diagnosticCollection.set(document.uri, allDiagnostics);
 
         if (editor && editor.document === document) {
-            // Применяем все декорации (импорты, обработчики, .map)
             editor.setDecorations(methodDecorationType, allDecorationRanges);
         }
 
-        // Применяем изменения к документу, если они есть
+        // Применение изменений к документу
         if (changes.length > 0 && editor) {
             const success = await editor.edit((editBuilder) => {
                 changes.forEach((change) => {
@@ -102,7 +121,6 @@ export function activate(context: vscode.ExtensionContext) {
                 });
             });
 
-            // Если изменения успешно применены, сохраняем файл
             if (success) {
                 await document.save();
                 console.log("Файл сохранен после применения изменений.");

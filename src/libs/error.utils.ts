@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import ts from "typescript";
-import { utils } from "../modules";
+import { utils } from "./../modules";
 
 export class ErrorUtils {
     private methodErrorRanges: vscode.Range[] = [];
@@ -49,7 +49,7 @@ export class ErrorUtils {
             const diagnostic = new vscode.Diagnostic(
                 range,
                 error.message,
-                vscode.DiagnosticSeverity.Error
+                vscode.DiagnosticSeverity.Warning
             );
             diagnostics.push(diagnostic);
 

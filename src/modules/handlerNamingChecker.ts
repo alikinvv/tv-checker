@@ -5,7 +5,7 @@ import * as vscode from "vscode";
  * @param methodName Название метода.
  * @returns true, если название начинается с "handle", иначе false.
  */
-function isHandlerMethod(methodName: string): boolean {
+function convertName(methodName: string): boolean {
     // Приводим название метода к нижнему регистру для проверки
     return methodName.toLowerCase().startsWith("handle");
 }
@@ -16,7 +16,7 @@ function isHandlerMethod(methodName: string): boolean {
  * @param document Документ, с которым работает VS Code.
  * @returns Массив диагностических сообщений и диапазонов для декораций.
  */
-export function checkHandlerNaming(
+export function checkNaming(
     code: string,
     document: vscode.TextDocument
 ): {
@@ -40,7 +40,7 @@ export function checkHandlerNaming(
         // Проверяем, содержит ли название слово "handle" (без учёта регистра)
         if (methodName && methodName.toLowerCase().includes("handle")) {
             // Если название содержит "handle", но не начинается с него, добавляем ошибку
-            if (!isHandlerMethod(methodName)) {
+            if (!convertName(methodName)) {
                 // Находим позицию названия метода в коде
                 const methodNameIndex =
                     match.index + match[0].indexOf(methodName);
@@ -54,7 +54,7 @@ export function checkHandlerNaming(
                     new vscode.Diagnostic(
                         range,
                         `Название метода "${methodName}" должно начинаться с "handle".`,
-                        vscode.DiagnosticSeverity.Error
+                        vscode.DiagnosticSeverity.Warning
                     )
                 );
                 decorationRanges.push(range);

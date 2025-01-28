@@ -60,7 +60,7 @@ export class Imports {
                             const diagnostic = new vscode.Diagnostic(
                                 range,
                                 `Импорт должен указывать на папку, а не на файл: ${importPath}`,
-                                vscode.DiagnosticSeverity.Error
+                                vscode.DiagnosticSeverity.Warning
                             );
                             diagnostics.push(diagnostic);
 
